@@ -4,7 +4,7 @@
     "name": "Rudolf Muehlbauer",
     "email": "rudolf.muehlbauer@gmail.com"
   },
-  "version": "0.1.3",
+  "version": "0.1.3-2",
   "scripts": {
     "start": "node app.js"
   },
@@ -12,8 +12,13 @@
     "express": "3.0.x",
     "jade": "*"
   },
+  "url": "https://github.com/mru00/backgammon.git",
   "readme": "\n\n# backgammon",
   "readmeFilename": "README.md",
-  "description": "[http://expressjs.com](http://express.js.com)",
-  "subdomain": "mru-backgammon"
+  "description": "[https://github.com/mru00/backgammon](https://github.com/mru00/backgammon)",
+  "subdomain": "mru-backgammon",
+  "engines": {
+    "node": "0.10.x"
+  },
+  "license": "MIT"
 }
