@@ -78,6 +78,10 @@ function Bar() {
     this.pikenum = -1;
 }
 
+Bar.get_center = function() {
+    return 319;
+}
+
 Bar.prototype.hittest = function(x, y) {
     return point_in_rect(x,y, [310, 0, 330, 430]);
 }
@@ -95,7 +99,7 @@ Bar.prototype.has_player = function(player) {
 
 function Piece(color, pikenum, stacknum) {
     this.color = color;
-    this.width = 30;
+    this.width = 40;
     this.height = 30;
     this.move(pikenum, stacknum);
 }
@@ -119,7 +123,8 @@ Piece.prototype.draw = function(ctx, stacknum, totalpieces) {
         ctx.drawImage(pieceImages[this.color], left-this.width/2, top);
     } 
     else {
-        ctx.drawImage(pieceImages[this.color], 290, 100 + 50*onbar);
+        var left = Bar.get_center() - this.width/2;
+        ctx.drawImage(pieceImages[this.color], left, 100 + 50*onbar);
     }
 }
 
@@ -176,10 +181,11 @@ function Skip() {
 Skip.prototype.draw = function(ctx, x, y) {
     if (!this.visible) return;
     ctx.save();
-    ctx.fillStyle = "#800";
+    ctx.fillStyle = "#300";
     ctx.fillRect(this.rect[0], this.rect[1], this.rect[2]-this.rect[0], this.rect[3]-this.rect[1]);
+    ctx.fillStyle = "#fff";
+    ctx.fillText("skip", 10 + this.rect[0], 20 + this.rect[1]);
     ctx.restore();
-    ctx.fillText("skip", this.rect[0], 20 + this.rect[1]);
 }
 
 Skip.prototype.hittest = function(x, y) {
@@ -243,43 +249,17 @@ Board.prototype.setup = function() {
         self.pikes[pikenum].pieces.push(new Piece(color, pikenum, self.pikes[pikenum].pieces.length));
     }
 
-    add_piece(0, 0);
-    add_piece(0, 0);
-    add_piece(0, 11);
-    add_piece(0, 11);
-    add_piece(0, 11);
-    add_piece(0, 11);
-    add_piece(0, 11);
-
-    add_piece(0, 16);
-    add_piece(0, 16);
-    add_piece(0, 16);
-
-    add_piece(0, 18);
-    add_piece(0, 18);
-    add_piece(0, 18);
-    add_piece(0, 18);
-    add_piece(0, 18);
+    add_piece(0, 0); add_piece(0, 0);
+    add_piece(0, 11); add_piece(0, 11); add_piece(0, 11); add_piece(0, 11); add_piece(0, 11); 
+    add_piece(0, 16); add_piece(0, 16); add_piece(0, 16);
+    add_piece(0, 18); add_piece(0, 18); add_piece(0, 18); add_piece(0, 18); add_piece(0, 18);
 
 
-    add_piece(1, 23);
-    add_piece(1, 23);
+    add_piece(1, 23); add_piece(1, 23);
+    add_piece(1, 12); add_piece(1, 12); add_piece(1, 12); add_piece(1, 12); add_piece(1, 12);
+    add_piece(1, 7); add_piece(1, 7); add_piece(1, 7);
+    add_piece(1, 5); add_piece(1, 5); add_piece(1, 5); add_piece(1, 5); add_piece(1, 5);
 
-    add_piece(1, 12);
-    add_piece(1, 12);
-    add_piece(1, 12);
-    add_piece(1, 12);
-    add_piece(1, 12);
-
-    add_piece(1, 7);
-    add_piece(1, 7);
-    add_piece(1, 7);
-
-    add_piece(1, 5);
-    add_piece(1, 5);
-    add_piece(1, 5);
-    add_piece(1, 5);
-    add_piece(1, 5);
 }
 
 Board.prototype.draw = function(ctx) {
@@ -302,14 +282,8 @@ Board.prototype.draw = function(ctx) {
     this.off[1].draw(ctx, 650, 100);
     this.off[0].draw(ctx, 650, 400);
 
-    var str = this.current_player == 0? "white" : "black";
-    if (this.all_in_home(this.current_player)) {
-        str += " home!";
-    }
-    else {
-        str += " not home";
-    }
-    ctx.fillText(str, 20, 10);
+    var str = this.current_player == 0 ? "white" : "black";
+    ctx.fillText("> " + str, 650, 230);
 }
 
 
@@ -418,8 +392,23 @@ function finish_move() {
         d.taken = false;
     });
     board.state = 0;
-    board.current_player = 1- board.current_player;
     board.skip.visible = false;
+
+
+    // test finished
+    if (board.off[board.current_player].pieces.length == 15) {
+        // won!!!
+        board.state =0;
+        board.bar.pieces = [];
+        board.off[0].pieces = [];
+        board.off[1].pieces = [];
+        board.pikes.forEach(function(pike) {
+            pike.pieces = [];
+        });
+        board.setup();
+    }
+
+    board.current_player = 1- board.current_player;
 }
 
 
