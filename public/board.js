@@ -17,21 +17,56 @@ function point_in_rect(x, y, rect) {
 
 
 
+function CheckerStack() { }
 
-function Pike(pikenum) {
-    this.pikenum = pikenum;
-    this.rect = this.pike_rect();
-    this.pieces = [];
+CheckerStack.prototype.init = function() {
+    this.checkers = new Array();
+    this.pointnum = 0;
 }
 
-Pike.prototype.pike_rect = function() {
-    var center = Pike.get_pike_center(this.pikenum);
+CheckerStack.prototype.constructor = CheckerStack();
+
+CheckerStack.prototype.push = function(checker) {
+    checker.move(this, this.pointnum, this.checkers.length);
+    return this.checkers.push(checker);
+}
+
+CheckerStack.prototype.pop = function() {
+    return this.checkers.pop();
+}
+
+CheckerStack.prototype.owner = function() {
+    if (this.checkers.length == 0) return undefined;
+    return this.checkers[0].color;
+}
+
+CheckerStack.prototype.peek = function() {
+    if (this.checkers.length == 0) return undefined;
+    return this.checkers[this.checkers.length -1];
+}
+
+CheckerStack.prototype.size = function() {
+    return this.checkers.length;
+}
+
+Point.prototype = new CheckerStack();
+Point.prototype.constructor = Point;
+function Point(pointnum) {
+    CheckerStack.prototype.init.call(this);
+    this.pointnum = pointnum;
+    this.checkers = [];
+    this.rect = this.point_rect();
+}
+
+
+Point.prototype.point_rect = function() {
+    var center = this.get_center();
 
     var y0, y1;
     var top1 = 17;
     var top2 = 385;
     var testheight = 170;
-    if (this.pikenum >= 12) {
+    if (this.pointnum >= 12) {
         y0 = top1 - 30;
         y1 = top1 + testheight;
     }
@@ -42,43 +77,46 @@ Pike.prototype.pike_rect = function() {
     return [ center - 25, y0, center +25, y1];
 }
 
-Pike.prototype.is_owned_by = function(player) {
-    if (this.pieces.length == 0) return undefined;
-    return this.pieces[0].color == player;
+Point.prototype.is_owned_by = function(player) {
+    if (this.checkers.length == 0) return undefined;
+    return this.checkers[0].color == player;
 }
 
-Pike.prototype.hittest = function(x, y) {
+Point.prototype.hittest = function(x, y) {
     return point_in_rect(x,y, this.rect);
 }
 
-Pike.prototype.draw = function(ctx) {
+Point.prototype.draw = function(ctx) {
     var self = this;
-    this.pieces.forEach(function (p, stacknum) {
-        p.draw(ctx, stacknum, self.pieces.length);
+    this.checkers.forEach(function (p, stacknum) {
+        p.draw(ctx, stacknum, self.checkers.length);
     });
 
-    ctx.fillText("" + (this.pikenum + 1), Pike.get_pike_center(this.pikenum), this.pikenum >= 12? 10 : 435);
+    ctx.fillText("" + (this.pointnum + 1), this.get_center(), this.pointnum >= 12? 10 : 435);
 }
 
-Pike.get_pike_center = function(pikenum) {
+Point.prototype.get_center = function() {
     var pos = [
       599, 549, 504, 450, 406, 359,
     279, 232, 184, 137, 90, 41
       ];
 
-    if(pikenum >= 12) {
-        return pos[23-pikenum];
+    if(this.pointnum >= 12) {
+        return pos[23-this.pointnum];
     }
-    return pos[pikenum];
+    return pos[this.pointnum];
 }
 
 
-function Bar() {
-    this.pieces = [];
-    this.pikenum = -1;
+Bar.prototype = new CheckerStack();
+Bar.prototype.constructor = Bar;
+function Bar(pointnum) {
+    CheckerStack.prototype.init.call(this);
+    this.pointnum = pointnum;
 }
 
-Bar.get_center = function() {
+
+Bar.prototype.get_center = function() {
     return 319;
 }
 
@@ -87,51 +125,50 @@ Bar.prototype.hittest = function(x, y) {
 }
 
 Bar.prototype.draw = function(ctx) {
-    this.pieces.forEach(function (p) {
+    this.checkers.forEach(function (p) {
         p.draw(ctx);
     });
 }
 
 Bar.prototype.has_player = function(player) {
-    if (this.pieces.length == 0) return false;
-    return this.pieces[0].color == player;
+    return this.owner() == player;
 }
 
-function Piece(color, pikenum, stacknum) {
+function Checker(color) {
     this.color = color;
     this.width = 40;
     this.height = 30;
-    this.move(pikenum, stacknum);
 }
 
-Piece.prototype.move = function(pikenum, stacknum) {
-    this.pikenum = pikenum;
+Checker.prototype.move = function(stack, pointnum, stacknum) {
+    this.stack = stack;
+    this.pointnum = pointnum;
     this.stacknum = stacknum;
 }
 
 
-Piece.prototype.draw = function(ctx, stacknum, totalpieces) {
-    if (! pieceImages[this.color] ) return;
+Checker.prototype.draw = function(ctx, stacknum, totalcheckers) {
+    if (! checkerImages[this.color] ) return;
 
     // on the bar?
-    var onbar = board.bar.pieces.indexOf(this);
+    var onbar = board.bar[this.color].checkers.indexOf(this);
 
     if (onbar == -1 ) {
-        var pos = this.get_position(stacknum, totalpieces);
+        var pos = this.get_position(stacknum, totalcheckers);
         var left = pos[0];
         var top = pos[1];
-        ctx.drawImage(pieceImages[this.color], left-this.width/2, top);
+        ctx.drawImage(checkerImages[this.color], left-this.width/2, top);
     } 
     else {
-        var left = Bar.get_center() - this.width/2;
-        ctx.drawImage(pieceImages[this.color], left, 100 + 50*onbar);
+        var left = this.stack.get_center() - this.width/2;
+        ctx.drawImage(checkerImages[this.color], left, 100 + 50*onbar);
     }
 }
 
-Piece.prototype.get_position = function (stacknum, totalpieces) {
+Checker.prototype.get_position = function (stacknum, totalcheckers) {
 
     var stackoffset;
-    if (totalpieces > 5) {
+    if (totalcheckers > 5) {
         stackoffset = 20
     }
     else {
@@ -141,8 +178,8 @@ Piece.prototype.get_position = function (stacknum, totalpieces) {
     var x0, y0;
     var top1 = 17;
     var top2 = 385;
-    x0 = Pike.get_pike_center(this.pikenum);
-    if (this.pikenum >= 12) {
+    x0 = this.stack.get_center();
+    if (this.pointnum >= 12) {
         y0 = top1 + stacknum*stackoffset;
     }
     else {
@@ -165,7 +202,6 @@ Die.prototype.draw = function(ctx, x, y) {
         ctx.drawImage(dieImages[this.value], x, y);
         ctx.restore();
     }
-
 }
 
 Die.prototype.roll = function() {
@@ -197,31 +233,34 @@ function Player() {
 }
 
 
+Off.prototype = new CheckerStack();
+Off.prototype.constructor = Off;
 function Off(player) {
+    CheckerStack.prototype.init.call(this);
     this.player = player;
-    this.pieces = [];
 }
+
 
 Off.prototype.draw = function(ctx, x, y) {
     var str = this.player == 0? "white" : "black";
-    ctx.fillText(str + " " + this.pieces.length, x, y);
+    ctx.fillText(str + " " + this.checkers.length, x, y);
 }
 
 function Board() {
     this.dice = [ new Die(), new Die(), new Die(), new Die() ];
     this.off = [ new Off(0), new Off(1) ];
-    this.pikes = new Array(24);
+    this.points = new Array(24);
     this.state = 0;
-    this.bar = new Bar();
+    this.bar =  [ new Bar(24), new Bar(-1) ];
     this.skip = new Skip();
     for (var i = 0; i<24; i++) {
-        this.pikes[i] = new Pike(i);
+        this.points[i] = new Point(i);
     }
     this.current_player = 0;
 }
 
 Board.prototype.all_in_home = function(player) {
-    if (board.bar.has_player(player)) return false;
+    if (board.bar[player].size() > 0) return false;
 
     var begin, end;
     if (player == 0) {
@@ -234,8 +273,8 @@ Board.prototype.all_in_home = function(player) {
     }
 
     for (var i = begin; i < end; i++) {
-        var pike = this.pikes[i];
-        if ( pike.pieces.length > 0 && pike.pieces[0].color == player) {
+        var point = this.points[i];
+        if ( point.owner() == player) {
           return false;
         }
     }
@@ -245,20 +284,20 @@ Board.prototype.all_in_home = function(player) {
 
 Board.prototype.setup = function() {
     var self = this;
-    function add_piece(color, pikenum) {
-        self.pikes[pikenum].pieces.push(new Piece(color, pikenum, self.pikes[pikenum].pieces.length));
+    function add_checker(color, pointnum) {
+        self.points[pointnum].push(new Checker(color));
     }
 
-    add_piece(0, 0); add_piece(0, 0);
-    add_piece(0, 11); add_piece(0, 11); add_piece(0, 11); add_piece(0, 11); add_piece(0, 11); 
-    add_piece(0, 16); add_piece(0, 16); add_piece(0, 16);
-    add_piece(0, 18); add_piece(0, 18); add_piece(0, 18); add_piece(0, 18); add_piece(0, 18);
+    add_checker(1, 0); add_checker(1, 0);
+    add_checker(1, 11); add_checker(1, 11); add_checker(1, 11); add_checker(1, 11); add_checker(1, 11); 
+    add_checker(1, 16); add_checker(1, 16); add_checker(1, 16);
+    add_checker(1, 18); add_checker(1, 18); add_checker(1, 18); add_checker(1, 18); add_checker(1, 18);
 
 
-    add_piece(1, 23); add_piece(1, 23);
-    add_piece(1, 12); add_piece(1, 12); add_piece(1, 12); add_piece(1, 12); add_piece(1, 12);
-    add_piece(1, 7); add_piece(1, 7); add_piece(1, 7);
-    add_piece(1, 5); add_piece(1, 5); add_piece(1, 5); add_piece(1, 5); add_piece(1, 5);
+    add_checker(0, 23); add_checker(0, 23);
+    add_checker(0, 12); add_checker(0, 12); add_checker(0, 12); add_checker(0, 12); add_checker(0, 12);
+    add_checker(0, 7); add_checker(0, 7); add_checker(0, 7);
+    add_checker(0, 5); add_checker(0, 5); add_checker(0, 5); add_checker(0, 5); add_checker(0, 5);
 
 }
 
@@ -268,8 +307,8 @@ Board.prototype.draw = function(ctx) {
         ctx.drawImage(boardImage, 0, 0);
     }
 
-    this.pikes.forEach(function(pike, pike_index) {
-        pike.draw(ctx);
+    this.points.forEach(function(point, point_index) {
+        point.draw(ctx);
     });
 
     this.dice[0].draw(ctx, 450, 200);
@@ -278,7 +317,8 @@ Board.prototype.draw = function(ctx) {
     this.dice[3].draw(ctx, 150, 200);
 
     this.skip.draw(ctx);
-    this.bar.draw(ctx);
+    this.bar[0].draw(ctx);
+    this.bar[1].draw(ctx);
     this.off[1].draw(ctx, 650, 100);
     this.off[0].draw(ctx, 650, 400);
 
@@ -318,13 +358,11 @@ function onclick(evt) {
     return false;
 }
 
-function get_pike(x, y, player) {
+function get_point(x, y, player) {
     for (var i = 0; i < 24; i++) {
-        var pike = board.pikes[i];
-        if (pike.pieces.length == 0) continue;
-        if (pike.pieces[0].color != player) continue;
-        if (pike.hittest(x, y)) {
-            return pike;
+        var point = board.points[i];
+        if (point.owner() == player && point.hittest(x, y)) {
+            return point;
 
         }
     }
@@ -332,22 +370,13 @@ function get_pike(x, y, player) {
 }
 
 
-function move_to_bar(piece) {
-    board.bar.pieces.push(piece);
-}
 
-
-function move_piece(pike, amount) {
-    if (pike.pieces.length == 0)
+function move_checker(point, amount) {
+    var peeked_checker = point.peek();
+    if (peeked_checker == undefined)
       return false;
-    var piece = pike.pieces[pike.pieces.length-1];
-    var i = pike.pikenum;
-    // special: pike is bar
-    if (pike.pikenum == -1 ) {
-        if (piece.color == 0) {
-            i = 24;
-        }
-    }
+
+    var i = point.pointnum;
 
     function is_off(target, player) {
         if (player == 0)
@@ -356,32 +385,31 @@ function move_piece(pike, amount) {
     }
 
     amount += 1;
-    var target = piece.color == 0 ? i-amount : i+amount;
-    var pike_target = board.pikes[target];
+    var target = peeked_checker.color == 0 ? i-amount : i+amount;
+    var point_target = board.points[target];
 
-    if (board.all_in_home(piece.color) && is_off(target, piece.color)) {
-        pike.pieces.pop();
-        board.off[piece.color].pieces.push(piece);
-        return true;
+    if (is_off(target, board.current_player)) {
+        if (board.all_in_home(board.current_player)) {
+            board.off[board.current_player].push(point.checkers.pop());
+            return true;
+        }
+        else {
+            return false;
+        }
     }
-    else if (is_off(target, piece.color)) {
-        return false;
-    }
-    else if (pike_target.pieces.length == 1 && pike_target.pieces[0].color != piece.color) {
-        move_to_bar(pike_target.pieces.pop());
-        pike.pieces.pop();
-        piece.move(target, pike_target.pieces.length);
-        pike_target.pieces.push(piece);
-        return true;
-    }
-    else if (pike_target.pieces.length > 0 && pike_target.pieces[0].color != piece.color) {
-        return false;
+    else if (point_target.owner() == 1-board.current_player) {
+        if (point_target.size() == 1) {
+
+            board.bar[1-board.current_player].push(point_target.pop());
+            point_target.push(point.pop());
+            return true;
+        } 
+        else {
+            return false;
+        }
     }
     else {
-
-        pike.pieces.pop();
-        piece.move(target, pike_target.pieces.length);
-        pike_target.pieces.push(piece);
+        point_target.push(point.pop());
         return true;
     }
 }
@@ -396,14 +424,15 @@ function finish_move() {
 
 
     // test finished
-    if (board.off[board.current_player].pieces.length == 15) {
+    if (board.off[board.current_player].checkers.length == 15) {
         // won!!!
         board.state =0;
-        board.bar.pieces = [];
-        board.off[0].pieces = [];
-        board.off[1].pieces = [];
-        board.pikes.forEach(function(pike) {
-            pike.pieces = [];
+        board.bar[0].checkers = [];
+        board.bar[1].checkers = [];
+        board.off[0].checkers = [];
+        board.off[1].checkers = [];
+        board.points.forEach(function(point) {
+            point.checkers = [];
         });
         board.setup();
     }
@@ -434,24 +463,25 @@ function move(xpos, ypos) {
         board.state = 1;
         break;
       case 1:
-        var pike;
+        var point;
         if (board.skip.hittest(xpos, ypos)) {
             finish_move();
             break;
         }
-        else if (board.bar.has_player(board.current_player)) {
-            var hit = board.bar.hittest(xpos, ypos);
+        else if (board.bar[board.current_player].size() > 0) {
+            var hit = board.bar[board.current_player].hittest(xpos, ypos);
             if (!hit) break;
-            pike = board.bar;
+            point = board.bar[board.current_player];
         }
         else {
-            pike = get_pike(xpos, ypos, board.current_player);
-            if (pike == undefined) break;
+            point = get_point(xpos, ypos, board.current_player);
+            if (point == undefined) break;
+            console.log (" hite point " + point.pointnum );
         }
 
 
         var die = board.dice[board.nmove-1];
-        if (move_piece(pike, die.value)) {
+        if (move_checker(point, die.value)) {
             board.nmove --;
             die.taken = true;
             if (board.nmove == 0)  {
@@ -470,7 +500,7 @@ function move(xpos, ypos) {
 
 
 var board = new Board();
-var pieceImages = new Array(2);
+var checkerImages = new Array(2);
 var dieImages = new Array(6);
 var boardImage;
 
@@ -480,10 +510,10 @@ $(document).ready(function() {
     window.setInterval(redraw, 500);
     boardImage = new Image();
     boardImage.src = "/board.png";
-    pieceImages[0] = new Image();
-    pieceImages[1] = new Image();
-    pieceImages[0].src = "/piece_white.png";
-    pieceImages[1].src = "/piece_black.png";
+    checkerImages[0] = new Image();
+    checkerImages[1] = new Image();
+    checkerImages[0].src = "/piece_white.png";
+    checkerImages[1].src = "/piece_black.png";
     for (var i = 0; i < 6; i++ ) {
         dieImages[i] = new Image();
         dieImages[i].src = "/die_" + (i+1) + ".png"
