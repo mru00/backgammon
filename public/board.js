@@ -324,7 +324,7 @@ var Off = new Class({
 var Dice = new Class({
 
     initialize: function() {
-        this.dice = [ new Die([450, 200]), new Die([350, 200]), new Die([250, 200]), new Die([150, 200]) ];
+        this.dice = [ new Die([470, 220]), new Die([370, 220]), new Die([270, 220]), new Die([170, 220]) ];
     },
     roll: function() {
         var self = this;
@@ -335,7 +335,7 @@ var Dice = new Class({
                 new Animation(10, function(alpha){
 
                     self.dice[2].position = alpha_blend_position(alpha, self.dice[0].target_position, self.dice[2].target_position);
-                    self.dice[3].position = alpha_blend_position(alpha, self.dice[3].target_position, self.dice[3].target_position);
+                    self.dice[3].position = alpha_blend_position(alpha, self.dice[1].target_position, self.dice[3].target_position);
 
                     self.dice[2].visible = self.dice[3].visible = true;
                 });
@@ -387,7 +387,7 @@ var Board = new Class({
         return true;
     },
 
-    setup : function() {
+    place_checkers : function() {
         var self = this;
         function add_checker(color, pointnum) {
             self.points[pointnum].push(new Checker(color));
@@ -487,7 +487,7 @@ var Board = new Class({
         this.points.forEach(function(point) {
             point.checkers = [];
         });
-        this.setup();
+        this.place_checkers();
     },
 
     finish_move : function() {
@@ -577,6 +577,7 @@ function redraw() {
         a.advance();
     });
 
+    if (!imageHandler.is_complete()) return;
     if (running_animations.length ==0 && !needs_redraw) return;
 
     needs_redraw = false;
@@ -616,6 +617,23 @@ function get_point(x, y, player) {
 }
 
 
+var ImageHandler = new Class({
+    initialize: function() {
+        this.waiting = 0;
+    },
+    load_image: function(url) {
+        this.waiting ++;
+        var self = this;
+        var img = new Image();
+        img.onload = function() { self.waiting --; }
+        img.src = url;
+        return img;
+    },
+    is_complete: function() {
+        return this.waiting == 0;
+    }
+
+});
 
 
 
@@ -623,22 +641,27 @@ var board = new Board();
 var checkerImages = new Array(2);
 var dieImages = new Array(6);
 var boardImage;
+var imageHandler = new ImageHandler();
+
 
 $(document).ready(function() {
 
-    board.setup();
-    window.setInterval(redraw, 50);
-    boardImage = new Image();
-    boardImage.src = "/board.png";
-    checkerImages[0] = new Image();
-    checkerImages[1] = new Image();
-    checkerImages[0].src = "/piece_white.png";
-    checkerImages[1].src = "/piece_black.png";
+    board.place_checkers();
+    window.setInterval(redraw, 20);
+    boardImage = imageHandler.load_image("/board.png");
+    checkerImages[0] = imageHandler.load_image("/piece_white.png");
+    checkerImages[1] = imageHandler.load_image("/piece_black.png");
     for (var i = 0; i < 6; i++ ) {
-        dieImages[i] = new Image();
-        dieImages[i].src = "/die_" + (i+1) + ".png"
+        dieImages[i] = imageHandler.load_image("/die_" + (i+1) + ".png")
     }
     redraw();
 
     $('#canvas').bind('mousedown', onclick);
+
+
+    var socket = io.connect();
+    socket.on('news', function (data) {
+        console.log(data);
+        socket.emit('my other event', { my: 'data' });
+    });
 });
