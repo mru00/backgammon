@@ -7,7 +7,7 @@
 require('mootools');
 var io = require('socket.io');
 
-var Games = require('game');
+var Games = require('./game');
 
 var express = require('express')
   , routes = require('./routes')
