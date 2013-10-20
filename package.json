@@ -1,5 +1,6 @@
 {
   "name": "backgammon",
+  "main" : "app.js",
   "author": {
     "name": "Rudolf Muehlbauer",
     "email": "rudolf.muehlbauer@gmail.com"
