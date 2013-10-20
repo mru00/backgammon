@@ -26,6 +26,7 @@ if(process.env.SUBDOMAIN){
 var app = express();
 
 app.configure(function(){
+  app.set('ipaddress', ip);
   app.set('port',  port);
   app.set('views', __dirname + '/views');
   app.set('view engine', 'jade');
@@ -48,7 +49,7 @@ app.get('/users', user.list);
 
 var server = http.createServer(app);
 
-server.listen(app.get('port'), function(){
+server.listen(app.get('port'), app.get('ipaddress'), function(){
   console.log("Express server listening on port " + app.get('port'));
   console.log(url);
 });
