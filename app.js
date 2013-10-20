@@ -57,6 +57,7 @@ server.listen(app.get('port'), app.get('ipaddress'), function(){
 
 
 var sio = io.listen(server);
+io.set('transports', ['websocket']);
 sio.sockets.on('connection' ,function(socket){
     console.log('a socket connected');
     games.create(sio);
