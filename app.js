@@ -14,7 +14,8 @@ var express = require('express')
   , user = require('./routes/user')
   , http = require('http')
   , path = require('path')
-  , port = 8080
+  , port = process.env.OPENSHIFT_NODEJS_PORT || process.env.PORT || 8080
+  , ip = process.env.OPENSHIFT_NODEJS_IP || "127.0.0.1"
   , url  = 'http://localhost:' + port + '/';
 /* We can access nodejitsu enviroment variables from process.env */
 /* Note: the SUBDOMAIN variable will always be defined for a nodejitsu app */
@@ -25,7 +26,7 @@ if(process.env.SUBDOMAIN){
 var app = express();
 
 app.configure(function(){
-  app.set('port', process.env.PORT || port);
+  app.set('port',  port);
   app.set('views', __dirname + '/views');
   app.set('view engine', 'jade');
   app.use(express.favicon());
