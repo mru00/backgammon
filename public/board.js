@@ -404,7 +404,7 @@ var Board = new Class({
         this.state = 0;
         this.bar =  [ new Bar(24), new Bar(-1) ];
         this.skip = new Skip();
-        this.checker = new Array(30);
+        this.checkers = new Array(30);
         for (var i = 0; i<24; i++) {
             this.points[i] = new Point(i);
         }
