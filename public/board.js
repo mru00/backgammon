@@ -25,30 +25,19 @@ var CheckerStack = new Class( {
         this.checkers = new Array();
         this.pointnum = 0;
     },
-    push: function(checker) {
-        var self = this;
-        this.checkers.push(checker);
+    load: function(data) {
+        var that = this;
+        that.checkers = [];
+        data.checkers.forEach(function(e,i) {
+            var checker = new Checker();
+            checker.load(e);
+            that.checkers.push(checker);
+        });
         this.checkers.forEach(function(c, i){
-            c.move(self, self.pointnum, i);
+            c.move(that, that.pointnum, i);
         });
     },
-    pop : function() {
-        var c = this.checkers.pop();
-        var self = this;
-        this.checkers.forEach(function(c, i){
-            c.move(self, self.pointnum, i);
-        });
-        return c;
-    },
-    owner : function() {
-        if (this.checkers.length == 0) return undefined;
-        return this.checkers[0].color;
-    },
-    peek : function() {
-        if (this.checkers.length == 0) return undefined;
-        return this.checkers[this.checkers.length -1];
-    },
-    size : function() {
+    size: function() {
         return this.checkers.length;
     }
 });
@@ -61,6 +50,10 @@ var Point = new Class({
         this.pointnum = pointnum;
         this.checkers = [];
         this.rect = this.point_rect();
+    },
+    load: function(data) {
+        this.parent(data);
+        this.pointnum = data.pointnum;
     },
     point_rect: function() {
         var center = this.get_center();
@@ -90,9 +83,9 @@ var Point = new Class({
     },
 
     draw : function(ctx) {
-        var self = this;
+        var that = this;
         this.checkers.forEach(function (p, stacknum) {
-            p.draw(ctx, self.get_position(stacknum));
+            p.draw(ctx, that.get_position(stacknum));
         });
 
         ctx.fillText("" + (this.pointnum + 1), this.get_center(), this.pointnum >= 12? 10 : 435);
@@ -141,6 +134,10 @@ var Bar = new Class({
         this.parent();
         this.pointnum = pointnum;
     },
+    load: function(data) {
+        this.parent(data);
+        this.pointnum = data.pointnum;
+    },
     get_center : function() {
         return 319;
     },
@@ -148,9 +145,9 @@ var Bar = new Class({
         return point_in_rect(x,y, [310, 0, 330, 430]);
     },
     draw : function(ctx) {
-        var self = this;
+        var that = this;
         this.checkers.forEach(function (p, i) {
-            p.draw(ctx, [ self.get_center(), 100 + 50*i ] );
+            p.draw(ctx, [ that.get_center(), 100 + 50*i ] );
         });
     },
     has_player : function(player) {
@@ -171,7 +168,7 @@ var Animation = new Class({
         this.on_finish = on_finished;
         this.on_step = on_step;
         running_animations.push(this);
-        var self = this;
+        var that = this;
 
     },
     advance: function() {
@@ -207,16 +204,26 @@ var Checker = new Class({
         this.width = 40;
         this.height = 30;
         this.position = [0, 0];
+        this.stacknum = 0;
+        this.pointnum = 0;
     },
 
+    load: function(data) {
+        this.color = data.color;
+
+
+
+        this.pointnum = data.pointnum;
+        this.stacknum = data.stacknum;
+    },
     move : function(stack, pointnum, stacknum) {
         if (this.stack != undefined) {
             var from_position = [this.position[0], this.position[1]];
             var to_position = stack.get_position(stacknum);
-            var self = this;
+            var that = this;
 
             new Animation(10, function(alpha) {
-                self.position = alpha_blend_position(alpha, from_position, to_position);
+                that.position = alpha_blend_position(alpha, from_position, to_position);
             });
 
         }
@@ -238,47 +245,14 @@ var Checker = new Class({
     }
 });
 
-var Die = new Class({
-    initialize : function (position) {
-        this.roll();
+
+
+var Button = new Class({
+
+    initialize: function (rect, title) {
         this.visible = false;
-        this.taken = false;
-        this.target_position = position;
-        this.position = [ position[0], position[1] ];
-        this.rotation = 0;
-    },
-
-    draw : function(ctx, x, y) {
-        if (!dieImages[this.value]) return;
-        if (this.visible) {
-            ctx.save();
-            ctx.globalAlpha = this.taken? 0.3: 1;
-            ctx.translate(this.position[0], this.position[1]); 
-            ctx.rotate(100*this.rotation);
-            ctx.drawImage(dieImages[this.value], -24, -24);
-            ctx.restore();
-        }
-    },
-
-    roll : function(on_finish) {
-        var self = this;
-        this.visible = true;
-        this.value = Math.floor( Math.random() * 6 );
-        this.position = [ 600, 300 ];
-        new Animation(10, function(alpha) {
-            self.position = alpha_blend_position(alpha, [600, 300], self.target_position);
-            self.rotation = alpha;
-        }, on_finish);
-    }
-
-});
-
-
-var Skip = new Class({
-
-    initialize: function () {
-        this.visible = false;
-        this.rect = [ 650, 300, 700, 330 ];
+        this.rect = rect;
+        this.title = title;
     },
 
     draw : function(ctx, x, y) {
@@ -287,7 +261,7 @@ var Skip = new Class({
         ctx.fillStyle = "#300";
         ctx.fillRect(this.rect[0], this.rect[1], this.rect[2]-this.rect[0], this.rect[3]-this.rect[1]);
         ctx.fillStyle = "#fff";
-        ctx.fillText("skip", 10 + this.rect[0], 20 + this.rect[1]);
+        ctx.fillText(this.title, 10 + this.rect[0], 20 + this.rect[1]);
         ctx.restore();
     },
 
@@ -295,6 +269,27 @@ var Skip = new Class({
         return point_in_rect(x, y, this.rect);
     }
 
+});
+
+
+var Skip = new Class({
+    Extends: Button,
+    initialize: function () {
+        this.parent([ 650, 300, 700, 330 ], "skip");
+        this.visible = false;
+    },
+    load: function(data) {
+        this.visible = data.visible;
+    }
+});
+
+
+var Roll = new Class({
+    Extends: Button,
+    initialize: function () {
+        this.parent([ 650, 100, 700, 130 ], "roll");
+        this.visible = false;
+    }
 });
 
 function Player(color) {
@@ -310,8 +305,18 @@ var Off = new Class({
         this.parent();
         this.player = player;
     },
+    load: function(data) {
+        this.parent(data);
+        this.player = data.player;
+    },
     draw : function(ctx, x, y) {
         var str = this.player == 0? "white" : "black";
+        if (this.player == board.current_player) {
+            ctx.save();
+            ctx.fillStyle = "green";
+            ctx.fillRect(x - 5, y - 9, 40, 20);
+            ctx.restore();
+        }
         ctx.fillText(str + " " + this.checkers.length, x, y);
     },
     get_position: function() {
@@ -321,24 +326,65 @@ var Off = new Class({
 });
 
 
+var Die = new Class({
+    initialize : function (position) {
+        this.roll();
+        this.visible = false;
+        this.taken = false;
+        this.target_position = position;
+        this.position = [ position[0], position[1] ];
+        this.rotation = 0;
+        this.start_position = [ 600, 300 ];
+    },
+
+    draw : function(ctx, x, y) {
+        if (!dieImages[this.value]) return;
+        if (this.visible) {
+            ctx.save();
+            ctx.globalAlpha = this.taken? 0.3: 1;
+            ctx.translate(this.position[0], this.position[1]); 
+            ctx.rotate(100*this.rotation);
+            ctx.drawImage(dieImages[this.value], -24, -24);
+            ctx.restore();
+        }
+    },
+    load: function(data) {
+        for (key in data) {
+            this[key] = data[key];
+        }
+    },
+
+    roll : function(on_finish) {
+        var that = this;
+        this.visible = true;
+        this.position = that.start_position;
+        new Animation(10, function(alpha) {
+            that.position = alpha_blend_position(alpha, that.start_position, that.target_position);
+            that.rotation = alpha;
+        }, on_finish);
+    }
+
+});
 var Dice = new Class({
 
     initialize: function() {
         this.dice = [ new Die([470, 220]), new Die([370, 220]), new Die([270, 220]), new Die([170, 220]) ];
+        this.dice[2].start_position = this.dice[0].start_position;
+        this.dice[3].start_position = this.dice[1].start_position;
     },
-    roll: function() {
-        var self = this;
+    load: function(data) {
+        var that = this;
+        for (var i = 0; i < 4; i++) {
+            that.dice[i].load(data.dice[i]);
+        }
+    },
+    roll: function(data) {
+        var that = this;
         this.dice[0].roll();
         this.dice[1].roll(function() {
-            if (self.is_double()) {
-                self.dice[2].value = self.dice[3].value = self.dice[0].value;
-                new Animation(10, function(alpha){
-
-                    self.dice[2].position = alpha_blend_position(alpha, self.dice[0].target_position, self.dice[2].target_position);
-                    self.dice[3].position = alpha_blend_position(alpha, self.dice[1].target_position, self.dice[3].target_position);
-
-                    self.dice[2].visible = self.dice[3].visible = true;
-                });
+            if (that.is_double()) {
+                that.dice[2].roll();
+                that.dice[3].roll();
             }
         });
     },
@@ -358,56 +404,31 @@ var Board = new Class({
         this.state = 0;
         this.bar =  [ new Bar(24), new Bar(-1) ];
         this.skip = new Skip();
+        this.checker = new Array(30);
         for (var i = 0; i<24; i++) {
             this.points[i] = new Point(i);
         }
         this.current_player = 0;
+        this.socket = undefined; // set later
     },
-
-    all_in_home : function(player) {
-        if (board.bar[player].size() > 0) return false;
-
-        var begin, end;
-        if (player == 0) {
-            begin = 6; 
-            end = 24;
-        }
-        else {
-            begin = 0;
-            end = 18;
-        }
-
-        for (var i = begin; i < end; i++) {
-            var point = this.points[i];
-            if ( point.owner() == player) {
-                return false;
-            }
-        }
-
-        return true;
-    },
-
-    place_checkers : function() {
-        var self = this;
-        function add_checker(color, pointnum) {
-            self.points[pointnum].push(new Checker(color));
-        }
-
-        add_checker(1, 0); add_checker(1, 0);
-        add_checker(1, 11); add_checker(1, 11); add_checker(1, 11); add_checker(1, 11); add_checker(1, 11); 
-        add_checker(1, 16); add_checker(1, 16); add_checker(1, 16);
-        add_checker(1, 18); add_checker(1, 18); add_checker(1, 18); add_checker(1, 18); add_checker(1, 18);
-
-
-        add_checker(0, 23); add_checker(0, 23);
-        add_checker(0, 12); add_checker(0, 12); add_checker(0, 12); add_checker(0, 12); add_checker(0, 12);
-        add_checker(0, 7); add_checker(0, 7); add_checker(0, 7);
-        add_checker(0, 5); add_checker(0, 5); add_checker(0, 5); add_checker(0, 5); add_checker(0, 5);
-
+    load: function(data) {
+        var that = this;
+        console.log('loading gamestate, state=' + data.state);
+        this.current_player = data.current_player;
+        this.bar.forEach(function(e,i) { e.load(data.bar[i]); });
+        this.off.forEach(function(e,i) { e.load(data.off[i]); });
+        this.dice.load(data.dice);
+        this.skip.load(data.skip);
+        this.checkers.forEach(function(e,i) {
+            e.load(data.checkers[i]);
+        });
+        this.points.forEach(function(e,i) { e.load(data.points[i]);  });
+        this.state = data.state;
+        needs_redraw = true;
     },
 
     draw : function(ctx) {
-        var self = this;
+        var that = this;
         if (boardImage) {
             ctx.drawImage(boardImage, 0, 0);
         }
@@ -428,84 +449,12 @@ var Board = new Class({
         ctx.fillText("> " + str, 650, 230);
     },
 
-    test_move : function(point, amount) {
-        var peeked_checker = point.peek();
-        if (peeked_checker == undefined)
-          return false;
-
-        var i = point.pointnum;
-
-        function is_off(target, player) {
-            if (player == 0)
-              return target < 0;
-            return target > 23;
-        }
-
-        amount += 1;
-        var target = peeked_checker.color == 0 ? i-amount : i+amount;
-        var point_target = this.points[target];
-
-        if (is_off(target, this.current_player)) {
-            if (this.all_in_home(this.current_player)) {
-                this.off[this.current_player].push(point.checkers.pop());
-                return true;
-            }
-            return false;
-        }
-
-        if (point_target.owner() == 1-this.current_player) {
-            if (point_target.size() == 1) {
-
-                this.bar[1-this.current_player].push(point_target.pop());
-                point_target.push(point.pop());
-                return true;
-            } 
-            return false;
-        }
-
-
-        point_target.push(point.pop());
-        return true;
-    },
-
-    test_finish_game : function() {
-        // test finished
-        if (this.off[this.current_player].checkers.length == 15) {
-            this.finish_game();
-        }
-    },
-
-    finish_game : function() {
-        this.finish_move();
-
-        // won!!!
-        this.state =0;
-        this.bar[0].checkers = [];
-        this.bar[1].checkers = [];
-        this.off[0].checkers = [];
-        this.off[1].checkers = [];
-        this.points.forEach(function(point) {
-            point.checkers = [];
-        });
-        this.place_checkers();
-    },
-
-    finish_move : function() {
-
-        this.dice.dice.forEach( function(d) {
-            d.visible = false;
-            d.taken = false;
-        });
-        this.state = 0;
-        this.skip.visible = false;
-
-
-        this.current_player = 1- this.current_player;
-    },
 
 
     onaction : function(xpos, ypos) {
+        var that = this;
 
+        console.log("action, state=" + this.state);
         running_animations.forEach(function(a) {
             a.stop();
         });
@@ -513,49 +462,31 @@ var Board = new Class({
         switch (this.state) {
           case 0:
 
-            this.dice.roll();
+            socket.emit('roll');
+            that.state = -1;
 
-            this.skip.visible = true;
-            if (this.dice.is_double()){
-                this.nmove = 4;
-            }
-            else {
-                this.nmove = 2;
-            }
-
-            this.state = 1;
             break;
           case 1:
             var point;
             if (this.skip.hittest(xpos, ypos)) {
-                this.finish_move();
+                socket.emit('skip');
+                state = -1;
                 break;
             }
-            else if (this.bar[this.current_player].size() > 0) {
-                var hit = this.bar[this.current_player].hittest(xpos, ypos);
-                if (!hit) break;
-                point = this.bar[this.current_player];
+            else if (this.bar[this.current_player].hittest(xpos, ypos)) {
+                socket.emit('bar');
+                state = -1;
+                break;
             }
             else {
                 point = get_point(xpos, ypos, this.current_player);
-                if (point == undefined) break;
-                console.log ("hit point " + point.pointnum );
-            }
-
-
-            var die = this.dice.dice[this.nmove-1];
-            if (this.test_move(point, die.value)) {
-                this.nmove --;
-                die.taken = true;
-                this.test_finish_game();
-                if (this.nmove == 0)  {
-                    this.finish_move();
-                    this.state = 0;
-                }
-                else {
-                    // stay
+                if (point != undefined) {
+                    console.log('clicked point');
+                    socket.emit('point', point.pointnum);
+                    state = -1;
                 }
             }
+
             break;
 
         }
@@ -609,7 +540,7 @@ function onclick(evt) {
 function get_point(x, y, player) {
     for (var i = 0; i < 24; i++) {
         var point = board.points[i];
-        if (point.owner() == player && point.hittest(x, y)) {
+        if (point.hittest(x, y)) {
             return point;
         }
     }
@@ -623,9 +554,9 @@ var ImageHandler = new Class({
     },
     load_image: function(url) {
         this.waiting ++;
-        var self = this;
+        var that = this;
         var img = new Image();
-        img.onload = function() { self.waiting --; }
+        img.onload = function() { that.waiting --; }
         img.src = url;
         return img;
     },
@@ -642,11 +573,11 @@ var checkerImages = new Array(2);
 var dieImages = new Array(6);
 var boardImage;
 var imageHandler = new ImageHandler();
+var socket = undefined;
 
 
 $(document).ready(function() {
 
-    board.place_checkers();
     window.setInterval(redraw, 20);
     boardImage = imageHandler.load_image("/board.png");
     checkerImages[0] = imageHandler.load_image("/piece_white.png");
@@ -659,9 +590,20 @@ $(document).ready(function() {
     $('#canvas').bind('mousedown', onclick);
 
 
-    var socket = io.connect();
-    socket.on('news', function (data) {
-        console.log(data);
-        socket.emit('my other event', { my: 'data' });
+    socket = io.connect('/game/qkV');
+    socket.on('id', function(data) {
+        
     });
+    socket.on('gamestate', function(data) {
+        board.load(data);
+    });
+    socket.on('rolled', function(data) {
+        board.dice.roll();
+    });
+    socket.on('move', function(data) {
+
+    });
+    socket.on('finish_move', function(data) {
+    });
+    board.socket = socket;
 });

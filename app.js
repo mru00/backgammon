@@ -4,7 +4,11 @@
  * Module dependencies.
  */
 
+require('mootools');
 var io = require('socket.io');
+
+var Games = require('./game');
+
 var express = require('express')
   , routes = require('./routes')
   , user = require('./routes/user')
@@ -48,7 +52,14 @@ server.listen(app.get('port'), function(){
   console.log(url);
 });
 
+
+
 var sio = io.listen(server);
 sio.sockets.on('connection' ,function(socket){
     console.log('a socket connected');
+    games.create(sio);
 });
+
+
+var games = new Games();
+
