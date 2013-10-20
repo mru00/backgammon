@@ -590,7 +590,7 @@ $(document).ready(function() {
     $('#canvas').bind('mousedown', onclick);
 
 
-    socket = io.connect('/game/qkV');
+    socket = io.connect('ws://backgammon-mru.rhcloud.com:8000/game/qkV');
     socket.on('id', function(data) {
         
     });
